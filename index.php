@@ -21,6 +21,8 @@
             <a href="ventes.php">Ventes</a>
             <a href="approvisionnements.php">Approvisionnements</a>
             <a href="stocks.php">Stocks</a>
+            <a href="paiements.php">Paiements</a>
+
         </div>
     </div>
 

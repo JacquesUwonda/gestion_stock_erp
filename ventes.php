@@ -21,6 +21,8 @@
             <a href="ventes.php">Ventes</a>
             <a href="approvisionnements.php">Approvisionnements</a>
             <a href="stocks.php">Stocks</a>
+            <a href="paiements.php">Paiements</a>
+
         </div>
     </div>
 
@@ -28,63 +30,133 @@
     <div class="container">
         <h1>Gestion des ventes</h1>
 
-        <!-- Formulaire d'ajout/modification -->
-        <form action="ventes.php" method="post" id="saleForm">
-            <input type="hidden" id="saleId" name="saleId">
-            <label for="date_vente">Date de vente :</label>
-            <input type="date" id="date_vente" name="date_vente" required><br>
-            <label for="produit_id">Produit :</label>
-            <select id="produit_id" name="produit_id" required>
-                <?php
-                $sql = "SELECT id, nom, prix FROM Produits";
-                $stmt = $conn->query($sql);
-                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    echo "<option value='{$row['id']}' data-prix='{$row['prix']}'>{$row['nom']}</option>";
-                }
-                ?>
-            </select><br>
-            <label for="quantite">Quantité :</label>
-            <input type="number" id="quantite" name="quantite" required><br>
-            <label for="montant_total">Montant total :</label>
-            <input type="number" id="montant_total" name="montant_total" step="0.01" readonly><br>
-            <button type="submit" name="ajouter" id="submitBtn">Ajouter</button>
-            <button type="button" id="cancelBtn" style="display: none;">Annuler</button>
+        <!-- Formulaire de ventes multiples -->
+        <h2>Enregistrement multiple de ventes</h2>
+        <form id="multiSalesForm">
+            <table id="salesTable">
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire</th>
+                        <th>Total</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <select class="productSelect" name="product[]" required>
+                                <?php
+                                $sql = "SELECT id, nom, prix FROM Produits";
+                                $stmt = $conn->query($sql);
+                                while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                                    echo "<option value='{$row['id']}' data-prix='{$row['prix']}'>{$row['nom']}</option>";
+                                }
+                                ?>
+                            </select>
+                        </td>
+                        <td><input type="number" class="quantity" name="quantity[]" min="1" required></td>
+                        <td><input type="number" class="unitPrice" name="unitPrice[]" readonly></td>
+                        <td><input type="number" class="total" name="total[]" readonly></td>
+                        <td><button type="button" class="removeRow">Supprimer</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" id="addRow">Ajouter une ligne</button>
+            <button type="submit">Enregistrer les ventes</button>
         </form>
 
-        <!-- Tableau des ventes -->
-        <h2>Liste des ventes</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Date</th>
-                    <th>Produit</th>
-                    <th>Quantité</th>
-                    <th>Montant total</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
+        <!-- Filtres pour le suivi des ventes -->
+        <h2>Suivi des ventes</h2>
+        <div class="filters">
+            <label for="filterDate">Date :</label>
+            <input type="date" id="filterDate">
+            <label for="filterProduct">Produit :</label>
+            <select id="filterProduct">
+                <option value="">Tous les produits</option>
                 <?php
-                $sql = "SELECT Ventes.*, Produits.nom AS produit_nom FROM Ventes JOIN Produits ON Ventes.produit_id = Produits.id";
+                $sql = "SELECT id, nom FROM Produits";
                 $stmt = $conn->query($sql);
                 while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                    echo "<tr data-id='{$row['id']}'>
-                            <td>{$row['id']}</td>
-                            <td>{$row['date_vente']}</td>
-                            <td>{$row['produit_nom']}</td>
-                            <td>{$row['quantite']}</td>
-                            <td>{$row['montant_total']}</td>
-                            <td>
-                                <button class='editBtn' data-id='{$row['id']}'><i class='fas fa-edit'></i></button>
-                                <button class='deleteBtn' data-id='{$row['id']}'><i class='fas fa-trash'></i></button>
-                            </td>
-                          </tr>";
+                    echo "<option value='{$row['id']}'>{$row['nom']}</option>";
                 }
                 ?>
-            </tbody>
-        </table>
-    </div>
+            </select>
+            <button id="applyFilters">Appliquer</button>
+        </div>
+
+        <!-- Tableau récapitulatif des ventes -->
+<table id="salesSummary">
+    <thead>
+        <tr>
+            <th>Sélection</th> <!-- Nouvelle colonne pour la sélection -->
+            <th>Date</th>
+            <th>Produit</th>
+            <th>Quantité</th>
+            <th>Montant total</th>
+        </tr>
+    </thead>
+    <tbody>
+        <?php
+        $sql = "SELECT Ventes.id, Ventes.date_vente, Produits.nom AS produit_nom, Ventes.quantite, Ventes.montant_total 
+                FROM Ventes 
+                JOIN Produits ON Ventes.produit_id = Produits.id";
+        $stmt = $conn->query($sql);
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            echo "<tr>
+                    <td><input type='checkbox' class='saleCheckbox' data-id='{$row['id']}'></td>
+                    <td>{$row['date_vente']}</td>
+                    <td>{$row['produit_nom']}</td>
+                    <td>{$row['quantite']}</td>
+                    <td>{$row['montant_total']} €</td>
+                  </tr>";
+        }
+        ?>
+    </tbody>
+</table>
+
+        <!-- Bouton pour imprimer un reçu -->
+<button id="printReceipt">Imprimer le reçu</button>
+
+<!-- Reçu -->
+<div id="receipt" style="display: none;">
+    <h2>Reçu de vente</h2>
+    <p>Nom de l'entreprise : <strong>Jacques ERP</strong></p>
+    <p>Date : <?php echo date('d/m/Y H:i'); ?></p>
+    <p>Mode de paiement : <span id="receiptPaymentMethod"></span></p>
+    <table>
+        <thead>
+            <tr>
+                <th>Produit</th>
+                <th>Quantité</th>
+                <th>Prix unitaire</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php
+            // Récupérer les détails de la vente depuis la base de données
+            $sql = "SELECT Produits.nom, Ventes.quantite, Ventes.montant_total 
+                    FROM Ventes 
+                    JOIN Produits ON Ventes.produit_id = Produits.id 
+                    ORDER BY Ventes.date_vente DESC 
+                    LIMIT 1"; // On récupère la dernière vente
+            $stmt = $conn->query($sql);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $prixUnitaire = ($row['montant_total'] / $row['quantite']);
+                echo "<tr>
+                        <td>{$row['nom']}</td>
+                        <td>{$row['quantite']}</td>
+                        <td>" . number_format($prixUnitaire, 2) . " €</td>
+                        <td>" . number_format($row['montant_total'], 2) . " €</td>
+                      </tr>";
+            }
+            ?>
+        </tbody>
+    </table>
+    <p>Total général : <strong><span id="receiptTotal"></span> €</strong></p>
+</div>
 
     <!-- SweetAlert2 JS -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -99,95 +171,159 @@
         });
     }
 
-    // Calcul automatique du montant total
-    document.getElementById('produit_id').addEventListener('change', function () {
-        updateTotal();
+    // Gestion des ventes multiples
+    document.getElementById('addRow').addEventListener('click', function () {
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td>
+                <select class="productSelect" name="product[]" required>
+                    <?php
+                    $sql = "SELECT id, nom, prix FROM Produits";
+                    $stmt = $conn->query($sql);
+                    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                        echo "<option value='{$row['id']}' data-prix='{$row['prix']}'>{$row['nom']}</option>";
+                    }
+                    ?>
+                </select>
+            </td>
+            <td><input type="number" class="quantity" name="quantity[]" min="1" required></td>
+            <td><input type="number" class="unitPrice" name="unitPrice[]" readonly></td>
+            <td><input type="number" class="total" name="total[]" readonly></td>
+            <td><button type="button" class="removeRow">Supprimer</button></td>
+        `;
+        document.querySelector('#salesTable tbody').appendChild(newRow);
     });
 
-    document.getElementById('quantite').addEventListener('input', function () {
-        updateTotal();
+    document.addEventListener('change', function (e) {
+        if (e.target.classList.contains('productSelect') || e.target.classList.contains('quantity')) {
+            const row = e.target.closest('tr');
+            const productSelect = row.querySelector('.productSelect');
+            const quantityInput = row.querySelector('.quantity');
+            const unitPriceInput = row.querySelector('.unitPrice');
+            const totalInput = row.querySelector('.total');
+
+            const prix = productSelect.options[productSelect.selectedIndex].getAttribute('data-prix');
+            const quantite = quantityInput.value;
+
+            unitPriceInput.value = prix;
+            totalInput.value = (prix * quantite).toFixed(2);
+        }
     });
 
-    function updateTotal() {
-        const produitId = document.getElementById('produit_id').value;
-        const quantite = document.getElementById('quantite').value;
-        const prix = document.querySelector(`#produit_id option[value='${produitId}']`).getAttribute('data-prix');
-        const montantTotal = (prix * quantite).toFixed(2);
-        document.getElementById('montant_total').value = montantTotal;
-    }
-
-    // Gestion de la modification
-    document.querySelectorAll('.editBtn').forEach(button => {
-        button.addEventListener('click', function () {
-            const row = this.closest('tr');
-            document.getElementById('saleId').value = row.getAttribute('data-id');
-            document.getElementById('date_vente').value = row.cells[1].textContent;
-            document.getElementById('produit_id').value = row.cells[2].textContent;
-            document.getElementById('quantite').value = row.cells[3].textContent;
-            document.getElementById('montant_total').value = row.cells[4].textContent;
-
-            document.getElementById('submitBtn').textContent = 'Modifier';
-            document.getElementById('cancelBtn').style.display = 'inline-block';
-        });
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('removeRow')) {
+            e.target.closest('tr').remove();
+        }
     });
 
-    // Gestion de l'annulation
-    document.getElementById('cancelBtn').addEventListener('click', function () {
-        document.getElementById('saleForm').reset();
-        document.getElementById('submitBtn').textContent = 'Ajouter';
-        this.style.display = 'none';
-    });
-
-    // Gestion de la suppression
-    document.querySelectorAll('.deleteBtn').forEach(button => {
-        button.addEventListener('click', function () {
-            const saleId = this.getAttribute('data-id');
-            Swal.fire({
-                title: 'Êtes-vous sûr ?',
-                text: 'Vous ne pourrez pas revenir en arrière !',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#1abc9c',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Oui, supprimer !'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    fetch(`delete_sale.php?id=${saleId}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                showNotification('success', 'Vente supprimée avec succès !').then(() => {
-                                    this.closest('tr').remove(); // Supprimer la ligne du tableau
-                                });
-                            } else {
-                                showNotification('error', 'Erreur lors de la suppression de la vente.');
-                            }
-                        });
-                }
-            });
-        });
-    });
-
-    // Soumission du formulaire
-    document.getElementById('saleForm').addEventListener('submit', function (e) {
-        e.preventDefault(); // Empêcher le rechargement de la page
+    document.getElementById('multiSalesForm').addEventListener('submit', function (e) {
+        e.preventDefault();
         const formData = new FormData(this);
 
-        fetch('save_sale.php', {
+        fetch('save_multiple_sales.php', {
             method: 'POST',
             body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showNotification('success', data.message).then(() => {
-                    window.location.reload(); // Recharger la page après la notification
-                });
+                showNotification('success', data.message);
+                window.location.reload();
             } else {
                 showNotification('error', data.message);
             }
         });
     });
+
+    // Filtrage des ventes
+    document.getElementById('applyFilters').addEventListener('click', function () {
+        const filterDate = document.getElementById('filterDate').value;
+        const filterProduct = document.getElementById('filterProduct').value;
+
+        fetch(`filter_sales.php?date=${filterDate}&product=${filterProduct}`)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.querySelector('#salesSummary tbody');
+                tbody.innerHTML = '';
+
+                data.forEach(sale => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${sale.date_vente}</td>
+                        <td>${sale.produit_nom}</td>
+                        <td>${sale.quantite}</td>
+                        <td>${sale.montant_total}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            });
+    });
+
+    // Impression du reçu
+    document.getElementById('printReceipt').addEventListener('click', async function () {
+    // Récupérer les ventes sélectionnées
+    const selectedSales = [];
+    document.querySelectorAll('.saleCheckbox:checked').forEach(checkbox => {
+        selectedSales.push(checkbox.getAttribute('data-id'));
+    });
+
+    // Vérifier si au moins une vente est sélectionnée
+    if (selectedSales.length === 0) {
+        alert('Veuillez sélectionner au moins une vente pour imprimer le reçu.');
+        return;
+    }
+
+    // Récupérer les données des ventes sélectionnées depuis l'API
+    const response = await fetch('print_receipt.php?selectedSales=' + selectedSales.join(','));
+    const ventes = await response.json();
+
+    // Calculer le total général
+    const totalGeneral = ventes.reduce((acc, vente) => acc + parseFloat(vente.montant_total), 0);
+
+    // Récupérer le mode de paiement (à adapter selon votre logique)
+    const paymentMethod = "Espèces"; // Exemple, à remplacer par la valeur réelle
+
+    // Ouvrir une nouvelle fenêtre pour l'impression
+    const printWindow = window.open('', '', 'height=600,width=800');
+    printWindow.document.write('<html><head><title>Reçu de vente</title><style>');
+    printWindow.document.write(`
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        h1 { text-align: center; font-size: 24px; color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f5f5f5; color: #333; }
+        .total { text-align: right; font-size: 16px; font-weight: bold; color: #333; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #777; }
+    `);
+    printWindow.document.write('</style></head><body>');
+    printWindow.document.write('<h1>Reçu de vente</h1>');
+    printWindow.document.write('<p>Nom de l\'entreprise : <strong>Jacques ERP</strong></p>');
+    printWindow.document.write(`<p>Date : ${new Date().toLocaleString()}</p>`);
+    printWindow.document.write(`<p>Mode de paiement : <strong>${paymentMethod}</strong></p>`);
+    printWindow.document.write('<table>');
+    printWindow.document.write('<thead><tr><th>Produit</th><th>Quantité</th><th>Prix unitaire</th><th>Total</th></tr></thead>');
+    printWindow.document.write('<tbody>');
+
+    // Ajouter les données des ventes sélectionnées
+    ventes.forEach(vente => {
+        const prixUnitaire = (vente.montant_total / vente.quantite).toFixed(2);
+        printWindow.document.write(`
+            <tr>
+                <td>${vente.nom}</td>
+                <td>${vente.quantite}</td>
+                <td>${prixUnitaire} $</td>
+                <td>${vente.montant_total} $</td>
+            </tr>
+        `);
+    });
+
+    printWindow.document.write('</tbody></table>');
+    printWindow.document.write(`<div class="total"><p>Total : <strong>${totalGeneral.toFixed(2)} $</strong></p></div>`);
+    printWindow.document.write('<div class="footer"><p>Merci pour votre achat !</p><p>Pour toute réclamation, contactez-nous au +243 819 665 262.</p></div>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+});
     </script>
 </body>
 </html>
